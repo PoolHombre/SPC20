@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPC 2.0 — Pool Monitor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f5f5; --card: #fff; --text: #1a1a1a; --muted: #666;
+    --border: #ddd; --green: #1a7f37; --green-bg: #d4edda;
+    --yellow: #856404; --yellow-bg: #fff3cd;
+    --red: #842029; --red-bg: #f8d7da;
+    --blue: #0d6efd; --font: system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --muted: #999;
+      --border: #333; --green: #4caf82; --green-bg: #1a3a25;
+      --yellow: #ffc107; --yellow-bg: #332d00;
+      --red: #f87171; --red-bg: #3a1a1a;
+    }
+  }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); padding: 1rem; max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+  .card h2 { font-size: 1rem; margin-bottom: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .status-badge {
+    display: inline-block; padding: 0.5rem 1.2rem;
+    border-radius: 6px; font-size: 1.4rem; font-weight: bold; letter-spacing: 0.05em;
+  }
+  .GREEN  { background: var(--green-bg);  color: var(--green); }
+  .YELLOW { background: var(--yellow-bg); color: var(--yellow); }
+  .RED    { background: var(--red-bg);    color: var(--red); }
+  .UNKNOWN { background: var(--border);   color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  .val { font-variant-numeric: tabular-nums; }
+  .quality-good    { color: var(--green); }
+  .quality-warn    { color: var(--yellow); }
+  .quality-fault   { color: var(--red); font-weight: bold; }
+  .quality-unknown { color: var(--muted); }
+  .reason { font-family: monospace; font-size: 0.85rem; color: var(--muted); }
+  .checks { margin-top: 0.5rem; padding-left: 1.2rem; font-size: 0.9rem; }
+  .checks li { margin-bottom: 0.25rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; }
+  .kv { display: flex; flex-direction: column; }
+  .kv span:first-child { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; }
+  .kv span:last-child  { font-size: 1rem; font-weight: 600; }
+  .pump-on  { color: var(--green); }
+  .pump-off { color: var(--muted); }
+  .ok   { color: var(--green); }
+  .fail { color: var(--red); }
+  footer { text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 1rem; }
+  #refresh-countdown { font-size: 0.8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>SPC 2.0 Pool Monitor</h1>
+<div class="meta">
+  Device: <strong>{{ device_id }}</strong> &nbsp;|&nbsp;
+  Version: {{ version }} &nbsp;|&nbsp;
+  Trial: {{ trial_phase }}{% if trial_run_id %} / {{ trial_run_id }}{% endif %} &nbsp;|&nbsp;
+  <span id="local-time">—</span>
+</div>
+
+<!-- Dispatch status -->
+<div class="card">
+  <h2>Dispatch Status</h2>
+  <span id="status-badge" class="status-badge UNKNOWN">LOADING…</span>
+  <div style="margin-top:0.75rem">
+    <span class="reason" id="reason-code">—</span>
+  </div>
+  <div style="margin-top:0.5rem" id="summary-text">Awaiting first telemetry cycle…</div>
+  <ul class="checks" id="checks-list"></ul>
+</div>
+
+<!-- Sensor readings -->
+<div class="card">
+  <h2>Sensor Readings</h2>
+  <div class="grid" style="margin-bottom:0.75rem">
+    <div class="kv">
+      <span>Pump</span>
+      <span id="pump-status" class="pump-off">—</span>
+    </div>
+    <div class="kv">
+      <span>Flow</span>
+      <span id="flow-gpm" class="val">— GPM</span>
+    </div>
+    <div class="kv">
+      <span>Filter DP</span>
+      <span id="filter-dp" class="val">— PSI</span>
+    </div>
+    <div class="kv">
+      <span>Observed</span>
+      <span id="observed-at" class="val" style="font-size:0.8rem">—</span>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Channel</th><th>Value (EU)</th><th>Raw mA</th><th>Quality</th></tr></thead>
+    <tbody id="sensor-table">
+      <tr><td colspan="4" style="color:var(--muted)">Awaiting data…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Storage & connectivity -->
+<div class="card">
+  <h2>Storage &amp; Connectivity</h2>
+  <div class="grid">
+    <div class="kv"><span>DB Path</span><span id="db-path" style="font-size:0.75rem;word-break:break-all">—</span></div>
+    <div class="kv"><span>DB Integrity</span><span id="db-integrity">—</span></div>
+    <div class="kv"><span>Upload Queue</span><span id="queue-depth">—</span></div>
+    <div class="kv"><span>Last Upload</span><span id="last-upload" style="font-size:0.8rem">—</span></div>
+    <div class="kv"><span>Uptime</span><span id="uptime">—</span></div>
+  </div>
+</div>
+
+<footer>
+  Auto-refreshes every 30 s &nbsp;·&nbsp; <span id="refresh-countdown">next refresh in 30s</span>
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  function qualityClass(q) {
+    if (!q) return 'quality-unknown';
+    if (q === 'GOOD') return 'quality-good';
+    if (q.includes('WARNING')) return 'quality-warn';
+    if (q.includes('FAULT') || q === 'CONFIG_ERROR') return 'quality-fault';
+    return 'quality-unknown';
+  }
+
+  function fmt(v, decimals, unit) {
+    if (v === null || v === undefined) return '—';
+    return Number(v).toFixed(decimals) + (unit ? ' ' + unit : '');
+  }
+
+  function fmtUptime(sec) {
+    if (!sec) return '—';
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.floor(sec % 60);
+    return (h > 0 ? h + 'h ' : '') + (m > 0 ? m + 'm ' : '') + s + 's';
+  }
+
+  function refresh() {
+    fetch('/api/status')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        // Local time
+        document.getElementById('local-time').textContent = new Date(d.local_time).toLocaleString();
+
+        // Dispatch
+        var disp = d.dispatch || {};
+        var badge = document.getElementById('status-badge');
+        badge.textContent = disp.status || 'UNKNOWN';
+        badge.className = 'status-badge ' + (disp.status || 'UNKNOWN');
+
+        document.getElementById('reason-code').textContent = disp.reason || '—';
+        document.getElementById('summary-text').textContent = disp.summary || '—';
+
+        var checksList = document.getElementById('checks-list');
+        checksList.innerHTML = '';
+        (disp.recommended_first_checks || []).forEach(function(c) {
+          var li = document.createElement('li');
+          li.textContent = c;
+          checksList.appendChild(li);
+        });
+
+        // Sensors
+        var s = d.sensors || {};
+        var pump = s.pump_running;
+        var pumpEl = document.getElementById('pump-status');
+        pumpEl.textContent = pump === null || pump === undefined ? '—' : (pump ? 'RUNNING' : 'OFF');
+        pumpEl.className = pump ? 'pump-on' : 'pump-off';
+
+        document.getElementById('flow-gpm').textContent = fmt(s.flow_gpm, 0, 'GPM');
+        document.getElementById('filter-dp').textContent = fmt(s.filter_dp_psi, 1, 'PSI');
+        document.getElementById('observed-at').textContent = s ? (d.sensors && d.sensors.observed_at ? new Date(d.sensors.observed_at).toLocaleTimeString() : '—') : '—';
+
+        var q = s.quality || {};
+        var ma = s.raw_ma || {};
+        var rows = [
+          ['P1 Suction',      fmt(s.p1_suction_psi, 1, 'PSI'),      fmt(ma.p1_avg, 3, 'mA'), q.p1],
+          ['P2 Filter Inlet', fmt(s.p2_filter_inlet_psi, 1, 'PSI'), fmt(ma.p2_avg, 3, 'mA'), q.p2],
+          ['P3 Filter Outlet',fmt(s.p3_filter_outlet_psi, 1, 'PSI'),fmt(ma.p3_avg, 3, 'mA'), q.p3],
+          ['Flow',            fmt(s.flow_gpm, 0, 'GPM'),             fmt(ma.flow_avg, 3, 'mA'), q.flow],
+        ];
+        var tbody = document.getElementById('sensor-table');
+        tbody.innerHTML = '';
+        rows.forEach(function(r) {
+          var tr = document.createElement('tr');
+          var qcls = qualityClass(r[3]);
+          tr.innerHTML =
+            '<td>' + r[0] + '</td>' +
+            '<td class="val">' + r[1] + '</td>' +
+            '<td class="val">' + r[2] + '</td>' +
+            '<td class="' + qcls + '">' + (r[3] || '—') + '</td>';
+          tbody.appendChild(tr);
+        });
+
+        // Storage
+        document.getElementById('db-path').textContent = d.db_path || '—';
+        var intEl = document.getElementById('db-integrity');
+        intEl.textContent = d.db_integrity_ok ? 'OK' : 'FAIL';
+        intEl.className = d.db_integrity_ok ? 'ok' : 'fail';
+        document.getElementById('queue-depth').textContent = d.upload_queue_depth !== undefined ? d.upload_queue_depth + ' pending' : '—';
+        document.getElementById('last-upload').textContent = d.last_upload_time ? new Date(d.last_upload_time).toLocaleString() : 'Never';
+        document.getElementById('uptime').textContent = fmtUptime(d.uptime_seconds);
+      })
+      .catch(function(e) {
+        console.error('Refresh failed:', e);
+      });
+  }
+
+  // Countdown timer
+  var remaining = 30;
+  function tick() {
+    document.getElementById('refresh-countdown').textContent = 'next refresh in ' + remaining + 's';
+    remaining--;
+    if (remaining < 0) {
+      remaining = 30;
+      refresh();
+    }
+    setTimeout(tick, 1000);
+  }
+
+  // Set local time immediately
+  document.getElementById('local-time').textContent = new Date().toLocaleString();
+
+  refresh();
+  tick();
+})();
+</script>
+</body>
+</html>

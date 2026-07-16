@@ -1,0 +1,16 @@
+[Unit]
+Description=SPC 2.0 Local Diagnostic Dashboard
+After=network.target spc20-logger.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/spc20
+EnvironmentFile=/etc/spc20/spc20.env
+ExecStart=/opt/spc20/venv/bin/gunicorn -w 2 -b 0.0.0.0:8080 "spc20.web.app:create_app()"
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

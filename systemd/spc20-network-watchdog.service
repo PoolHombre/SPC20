@@ -1,0 +1,79 @@
+# SPC 2.0 Network Watchdog — Design Stub
+#
+# This service monitors upstream connectivity and toggles the local AP fallback
+# when the site network is unavailable.
+#
+# STATUS: Design stub — not yet implemented for Build 1A.
+#         Implement in Build 1B (Yard) before outdoor deployment.
+#
+# Implementation notes:
+#   - Script: /usr/local/bin/spc20-network-watchdog.sh (to be written)
+#   - Check interval: 60 seconds
+#   - Upstream test: ping -c 2 -W 3 8.8.8.8 (or site gateway)
+#   - Grace period: 90 seconds of failed pings before AP activation
+#   - Activation: nmcli connection up spc20-ap
+#   - Deactivation: nmcli connection down spc20-ap && nmcli connection up site-wifi
+#   - Log all transitions: logger -t spc20-watchdog "<msg>"
+
+[Unit]
+Description=SPC 2.0 Network Watchdog — upstream monitor and AP fallback
+Documentation=file:///opt/spc20/docs/local_ap_fallback.md
+After=network-online.target NetworkManager.service
+Wants=network-online.target
+# Restart if the watchdog script crashes
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+# Replace with path to watchdog script when implemented
+ExecStart=/usr/local/bin/spc20-network-watchdog.sh
+Restart=on-failure
+RestartSec=30s
+
+# Security hardening
+User=root
+# root required for nmcli connection commands; consider polkit in later builds
+
+# Environment — script reads these to know which profiles to switch
+Environment="SPC20_AP_PROFILE=spc20-ap"
+Environment="SPC20_SITE_PROFILE=site-wifi"
+Environment="SPC20_PING_HOST=8.8.8.8"
+Environment="SPC20_CHECK_INTERVAL_SEC=60"
+Environment="SPC20_GRACE_PERIOD_SEC=90"
+
+# Log to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=spc20-watchdog
+
+[Install]
+WantedBy=multi-user.target
+
+# ─── Placeholder watchdog script (save to /usr/local/bin/spc20-network-watchdog.sh) ───
+# #!/bin/bash
+# set -euo pipefail
+# FAIL_COUNT=0
+# GRACE_CYCLES=$(( ${SPC20_GRACE_PERIOD_SEC:-90} / ${SPC20_CHECK_INTERVAL_SEC:-60} ))
+# AP_ACTIVE=false
+#
+# while true; do
+#   if ping -c 2 -W 3 "${SPC20_PING_HOST:-8.8.8.8}" > /dev/null 2>&1; then
+#     FAIL_COUNT=0
+#     if $AP_ACTIVE; then
+#       logger -t spc20-watchdog "Upstream restored — switching to site-wifi"
+#       nmcli connection down "${SPC20_AP_PROFILE:-spc20-ap}" || true
+#       nmcli connection up "${SPC20_SITE_PROFILE:-site-wifi}" || true
+#       AP_ACTIVE=false
+#     fi
+#   else
+#     FAIL_COUNT=$(( FAIL_COUNT + 1 ))
+#     logger -t spc20-watchdog "No upstream — fail_count=$FAIL_COUNT grace=$GRACE_CYCLES"
+#     if ! $AP_ACTIVE && [ "$FAIL_COUNT" -ge "$GRACE_CYCLES" ]; then
+#       logger -t spc20-watchdog "Activating AP fallback: ${SPC20_AP_PROFILE:-spc20-ap}"
+#       nmcli connection up "${SPC20_AP_PROFILE:-spc20-ap}" || true
+#       AP_ACTIVE=true
+#     fi
+#   fi
+#   sleep "${SPC20_CHECK_INTERVAL_SEC:-60}"
+# done
