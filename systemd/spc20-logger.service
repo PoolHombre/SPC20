@@ -1,0 +1,17 @@
+[Unit]
+Description=SPC 2.0 Pool Circulation Logger
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/spc20
+EnvironmentFile=/opt/spc20/.env
+ExecStart=/opt/spc20/venv/bin/python -m src.logger
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
