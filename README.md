@@ -1,6 +1,7 @@
-# SPC 2.0 — Smart Pool Circulation
+# SPC 2.0 — Smart Pool Circulation Monitor
 
-Read-only IoT pool monitor. Raspberry Pi + 4-20 mA sensors → Python logger → Supabase → GREEN/YELLOW/RED dispatch status for pool service routing.
+Read-only IoT pool monitor for commercial swimming pools.
+Raspberry Pi + 4-20 mA sensors → Python logger → Supabase → GREEN / YELLOW / RED dispatch status for pool service routing.
 
 **This system observes. It does not control anything.**
 
@@ -10,67 +11,25 @@ Read-only IoT pool monitor. Raspberry Pi + 4-20 mA sensors → Python logger →
 
 Every 60 seconds the logger:
 1. Averages 60 raw 1 Hz pressure and flow samples
-2. Converts mA to engineering units (PSI, GPM)
-3. Runs the GREEN/YELLOW/RED heuristic
-4. POSTs the one-minute summary to Supabase
-5. Buffers locally (SQLite) and retries if the network is down
+2. Classifies sensor quality (GOOD / LOOP_LOW_FAULT / LOOP_HIGH_FAULT / …)
+3. Converts mA to engineering units (PSI, GPM)
+4. Runs the GREEN / YELLOW / RED heuristic
+5. POSTs the one-minute summary to Supabase (with local SQLite retry queue)
+6. Updates the local Flask dashboard
 
 Dispatchers see a live status board. Technicians are routed only when the data says so.
 
 ---
 
-## Architecture
+## Build Structure
 
-```
-P1 Suction (4-20mA) ──┐
-P2 Filter In (4-20mA)──┤──→ Raspberry Pi 4B ──→ Supabase Edge Function ──→ route_status_current
-P3 Filter Out (4-20mA)─┤    Sequent HAT          readings_1min
-Flow (4-20mA) ─────────┤    heuristics.py
-Pump Proof (dry) ──────┘    local SQLite buffer
-```
+| Build | Phase | Hardware | Goal |
+|-------|-------|----------|------|
+| 1A | Bench | Pi + HAT on desk, bench power supply, sensor simulators or 4-20mA signal generators | Software + sensor chain verified in controlled environment |
+| 1B | Yard | 1A hardware moved to outdoor enclosure at yard facility, real sensors in bucket/pipe rig | Weatherproofing, real signals, 48-hr unattended run |
+| 1C | Field | 1B hardware installed at customer site | First live commercial pool, full trial, Build 2 decision |
 
----
-
-## Quickstart — Simulator Mode
-
-No hardware required. Runs against your Supabase backend from any machine.
-
-```bash
-git clone https://github.com/PoolHombre/SPC20.git
-cd SPC20
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # Linux/Mac
-
-pip install -e .
-
-cp .env.example .env
-# Edit .env: set DEVICE_ID, DEVICE_TOKEN, SUPABASE_INGEST_URL
-
-# Run green scenario (default)
-python scripts/run_simulator.py
-
-# Run a specific scenario
-SIM_SCENARIO=red_loss_of_prime python scripts/run_simulator.py
-```
-
-Available scenarios:
-- `green` — normal healthy pool
-- `yellow_filter` — filter DP approaching service threshold
-- `red_loss_of_prime` — pulsing flow, suction cavitation
-- `red_no_flow` — pump running, no flow detected
-- `fault_under` — under-range sensor (< 3.8 mA)
-- `fault_over` — over-range sensor (> 20.5 mA)
-- `invalid_p3_p2` — P3 >= P2 (physics violation)
-
----
-
-## Running Tests
-
-```bash
-pip install -e ".[dev]"
-pytest tests/
-```
+See `docs/build1_phase_gates.md` for measurable pass criteria at each gate.
 
 ---
 
@@ -78,52 +37,146 @@ pytest tests/
 
 | Status | Action | Meaning |
 |--------|--------|---------|
-| GREEN | NO_VISIT | All normal — skip this pool today |
-| YELLOW | ROUTE_TODAY | Something needs attention — include in route |
+| GREEN | NO_VISIT | All normal — no visit needed |
+| YELLOW | ROUTE_TODAY | Needs attention — include in today's route |
 | RED | SEND_NOW | Active problem — dispatch immediately |
 
-See `docs/system_overview.md` for the full heuristic logic and reason codes.
+Reason codes and recommended checks: `docs/heuristics.md`.
+
+---
+
+## Quick Start — Development (Simulator Mode)
+
+No hardware required. Runs against your Supabase backend or with a local mock.
+
+```bash
+git clone https://github.com/PoolHombre/SPC20.git
+cd SPC20
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+# Linux / macOS
+source .venv/bin/activate
+
+pip install -e ".[dev]"
+
+cp .env.example .env
+# Edit .env: set DEVICE_ID, DEVICE_TOKEN, SUPABASE_INGEST_URL
+# Leave SENSOR_ADAPTER=simulator for dev
+
+# Run the logger service (green scenario by default)
+python -m spc20.services.logger_service
+
+# Or run a specific scenario
+SIM_SCENARIO=red_loss_of_prime python -m spc20.services.logger_service
+```
+
+Available simulator scenarios: `green`, `yellow_filter`, `red_loss_of_prime`, `red_no_flow`, `fault_under`, `fault_over`, `invalid_p3_p2`.
+
+---
+
+## Quick Start — Local Dashboard
+
+```bash
+# In a second terminal:
+FLASK_APP="spc20.web.app:create_app()" flask run --port 8080
+# Or with gunicorn (production-style):
+gunicorn -w 2 -b 0.0.0.0:8080 "spc20.web.app:create_app()"
+
+# Open http://localhost:8080
+# API: http://localhost:8080/api/status
+```
+
+Dashboard docs: `docs/local_tech_dashboard.md`.
+
+---
+
+## Running Tests
+
+```bash
+pip install -e ".[dev]"
+pytest tests/ -v
+```
+
+---
+
+## Supabase Setup
+
+1. Create a Supabase project at supabase.com.
+2. Apply schema migrations:
+   ```bash
+   supabase db push
+   # Or via the MCP apply_migration tool in Claude Code
+   ```
+3. Deploy the Edge Function:
+   ```bash
+   supabase functions deploy spc20-ingest
+   ```
+4. Add your device row to the `devices` table (device_id + SHA-256 of device token).
+5. Set `SUPABASE_INGEST_URL` in `.env`.
+6. **Never** set `SUPABASE_SERVICE_ROLE_KEY` on the device.
+
+---
+
+## Raspberry Pi Deployment
+
+Full steps: `DEPLOYMENT_STEPS.md`.
+
+Short form:
+```bash
+# From dev machine:
+scp -r . pi@192.168.1.100:/opt/spc20/
+ssh pi@192.168.1.100
+cd /opt/spc20
+pip install -e .
+sudo cp systemd/spc20-logger.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now spc20-logger.service
+```
+
+---
+
+## Architecture
+
+```
+P1 Suction (4-20 mA)  ──┐
+P2 Filter In (4-20 mA) ──┤── Sequent HAT ── Pi GPIO ── spc20.adapters.sequent
+P3 Filter Out (4-20 mA)──┤
+Flow (4-20 mA) ──────────┤
+Pump Proof (dry contact) ─┘
+
+logger_service (1 Hz sample → 60-sec summarise → heuristics.evaluate)
+    │
+    ├── LocalBuffer (SQLite WAL) ─── uploader (retry queue)
+    │                                     └── Supabase Edge Function → readings_1min
+    └── web.app (Flask) ── /api/status, /api/live, /api/health
+```
 
 ---
 
 ## Repository Layout
 
 ```
-src/            Python logger source
-tests/          pytest unit tests
+src/spc20/
+  adapters/         SensorAdapter base + SimulatorAdapter + SequentAdapter
+  services/         logger_service.py — main loop
+  web/              Flask app factory, auth, templates
+  scaling.py        4-20 mA → engineering units
+  quality.py        Signal quality state machine
+  aggregation.py    60-sample → 1-min summary
+  calibration.py    ambient_zero and static_baseline modes
+  heuristics.py     GREEN / YELLOW / RED dispatch logic
+  buffer.py         SQLite local buffer + retry queue
+  config.py         DeviceConfig from env vars
+tests/              pytest test suite
 supabase/
-  migrations/   PostgreSQL schema (apply via supabase db push)
-  functions/    Deno Edge Function (deploy via supabase functions deploy)
-scripts/        install_service.sh (Pi), run_simulator.py (dev)
-systemd/        spc20-logger.service unit file
-docs/           System overview, purchase list, wiring, test plans, trial plan
+  migrations/       PostgreSQL schema
+  functions/        Deno Edge Function (spc20-ingest)
+systemd/            Service unit files
+docs/               Trial plans, wiring, calibration, heuristics docs
+scripts/            Pi installer, simulator runner, AP setup notes
 ```
-
----
-
-## Hardware
-
-Raspberry Pi 4B + Sequent Microsystems Industrial Automation HAT (4-channel 4-20 mA). Full BOM in `docs/purchase_list.md`. Wiring in `docs/wiring_diagram.md`.
-
----
-
-## Backend Setup
-
-1. Create a Supabase project
-2. Apply the migration: `supabase db push` or use the apply_migration MCP tool
-3. Deploy the Edge Function: `supabase functions deploy spc20-ingest`
-4. Add your device to the `devices` table with the SHA-256 hash of its token
-5. Set environment variables in `.env`
-
----
-
-## Field Deployment
-
-1. Complete bench acceptance test (`docs/bench_test_plan.md`) — all 17 tests must PASS
-2. Complete site survey (`docs/field_install_checklist.md`)
-3. Run `scripts/install_service.sh` on the Pi
-4. Complete field installation checklist
-5. Run 24-hour soak
 
 ---
 

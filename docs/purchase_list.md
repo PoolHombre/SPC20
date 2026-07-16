@@ -6,113 +6,108 @@ All prices are approximate USD as of mid-2026. Verify pricing before ordering.
 
 ---
 
-## Core Compute
+## Bench Core
 
-| # | Item | Spec / Part | Approx. Cost | Verify Before Buying |
-|---|------|-------------|-------------|----------------------|
-| 1 | Raspberry Pi 4B | 4 GB RAM | $55 | Confirm availability — supply varies. 4GB preferred over 2GB for headroom. 8GB unnecessary. |
-| 1 | SanDisk MAX Endurance microSD | 64 GB, Class 10 | $18 | Do not substitute with standard microSD — continuous 1 Hz writes will wear out a standard card within months. MAX Endurance or equivalent required. |
-| 1 | Official Raspberry Pi USB-C power supply (5V 3A) | Bench use only | $8 | For bench testing only. Field units power Pi from HAT's 5V rail — confirm HAT can supply 2.5A to Pi before wiring field unit this way. |
+Items required for Build 1A (Bench) operation.
 
----
+| # | Item | Spec / Part | Approx. Cost | Notes |
+|---|------|-------------|-------------|-------|
+| 1 | Raspberry Pi 4B | 4 GB RAM | $55 | 4 GB preferred; 8 GB unnecessary |
+| 1 | SanDisk MAX Endurance or industrial pSLC microSD | 64 GB | $18 | Do NOT use standard microSD — 1 Hz continuous writes require endurance card |
+| 1 | Official RPi USB-C power supply 5V 3A | Bench use only | $8 | Field units power Pi from HAT 5V rail |
+| 1 | Sequent Microsystems Industrial Automation HAT | 4-channel 4-20 mA, 8 DI, DIN-rail clip | $89 | Confirm "Industrial Automation" 8-layer HAT specifically |
+| 1 | Mean Well HDR-60-24 | 24 VDC 2.5A DIN-rail | $38 | Sufficient for 4 two-wire transmitter loops + Pi |
+| 1 | Fluke 709 or equivalent 4-20 mA loop calibrator | Source and measure mode | $350 | Rent if not owned — required for bench scaling verification |
+| 1 | Digital multimeter | mA range | (likely owned) | Loop polarity and cross-check |
 
-## HAT / Analog Input
-
-| # | Item | Spec / Part | Approx. Cost | Verify Before Buying |
-|---|------|-------------|-------------|----------------------|
-| 1 | Sequent Microsystems Industrial Automation HAT | 8-layer stackable, 4-channel 4-20 mA input, 8 digital I/O, DIN-rail clip | $89 | Confirm part number — Sequent sells multiple HATs. The "Industrial Automation" 8-layer version with 4-20mA input is required. Verify HAT firmware is current before bench test. |
-
----
-
-## Power Supply
-
-| # | Item | Spec / Part | Approx. Cost | Verify Before Buying |
-|---|------|-------------|-------------|----------------------|
-| 1 | Mean Well HDR-60-24 | 24 VDC, 2.5A, DIN-rail, 60W | $38 | Adequate for Pi + HAT + 4 two-wire transmitters (each draws ~25mA loop). If adding more devices later, size up to HDR-100-24. Verify input voltage matches site supply (120 VAC typical in US). |
+**Bench subtotal (excl. owned DMM): ~$558**
 
 ---
 
-## Enclosure
+## Yard Add-ons
 
-| # | Item | Spec / Part | Approx. Cost | Verify Before Buying |
-|---|------|-------------|-------------|----------------------|
-| 1 | NEMA 4X polycarbonate enclosure | Polycase ZW-233-16 or equivalent, approx. 9"x7"x4" interior | $45 | Size must fit Pi, HAT stack, PSU, terminal blocks, and fuse block with wire routing room. Measure the HAT stack height with all layers before ordering. NEMA 4X for outdoor/pool room splash exposure. |
-| 1 | DIN rail, 35mm | 12" length, cut to fit enclosure | $8 | Standard 35mm TS-35 rail. Cut to enclosure interior width. |
+Additional items for Build 1B (Yard) outdoor enclosure.
 
----
+| # | Item | Spec / Part | Approx. Cost | Notes |
+|---|------|-------------|-------------|-------|
+| 1 | NEMA 4X polycarbonate enclosure | ~9"×7"×4" interior, e.g. Polycase ZW-233-16 | $45 | Measure HAT stack height before ordering |
+| 1 | DIN rail 35mm TS-35 | 12" cut to enclosure width | $8 | |
+| 10 | DIN-rail terminal blocks | Phoenix UTTB 2.5 or equiv, 24 AWG rated | $25 | Order 15 for margin |
+| 1 | 4-way fused terminal block | 0.5A per loop, 24 VDC rated | $22 | |
+| 3 | Cable glands M20 or M16 | Size to actual cable OD | $15 | One per cable entry |
+| 1 | DIN-rail end stops and mounting feet | Match rail chosen | $6 | |
+| 1 | Label maker tape / heat-shrink labels | P-touch TZe or heat-shrink | $12 | Label both ends of every wire |
+| 1 | Stainless M3/M4 hardware kit | Pan head, self-tapping | $8 | Stainless for pool room environment |
 
-## Wiring and Protection
-
-| # | Item | Spec / Part | Approx. Cost | Verify Before Buying |
-|---|------|-------------|-------------|----------------------|
-| 10 | DIN-rail terminal blocks | Phoenix Contact UTTB 2.5 or equivalent, 24 AWG rated | $25 | 2 terminals per sensor channel (+ and signal), 2 for pump dry contact, 2 for 24V bus. 10 is minimum; order 15 for margin. |
-| 1 | 4-way fused terminal block or fuse block | TE Connectivity or Altech, 24VDC rated | $22 | One fused output per transmitter. Protects against wiring faults in the field. Confirm fuse amperage (0.5A per loop is typical for 4-20mA transmitters). |
-| 1 | 3-circuit cable gland kit | M20 or M16 as needed for cable OD | $15 | One gland per cable entry: sensor cable bundle, power, and ethernet (if hardwired). Size to actual cable diameter. |
-| 1 | DIN-rail end stops and mounting feet | Matching the DIN rail chosen | $6 | Prevents rail components sliding off ends. |
-| 1 | Label maker tape / heat-shrink labels | P-touch TZe or equivalent | $12 | Label every terminal and wire at both ends. Non-negotiable for field maintainability. |
-| 1 | Stainless M3/M4 hardware kit | Pan head, self-tapping for enclosure mounting | $8 | Stainless for wet/corrosive pool room environment. |
+**Yard add-on subtotal: ~$141**
 
 ---
 
-## Pressure Transmitters
+## Field Add-ons
 
-| # | Item | Spec / Part | Approx. Cost | Verify Before Buying |
-|---|------|-------------|-------------|----------------------|
-| 1 | P1: Compound pressure transmitter | -15 to +15 PSI, 4-20 mA, 2-wire, 1/4" NPT | $65 | Must handle vacuum (compound range). Confirm wetted materials are compatible with pool water chemistry if installed in a wet port. Ashcroft, Dwyer, or Omega are reliable options. |
-| 2 | P2/P3: Gauge pressure transmitters | 0-100 PSI, 4-20 mA, 2-wire, 1/4" NPT | $55 ea | 0-100 PSI is a safe overrange for most commercial pool filter systems (typical operating 15-40 PSI). If the system operates above 60 PSI, confirm with filter manufacturer. Same model as P1 if compound range is acceptable — reduces spare parts complexity. |
+Additional items required for customer-premises installation (Build 1C).
 
----
+| # | Item | Spec / Part | Approx. Cost | Notes |
+|---|------|-------------|-------------|-------|
+| 1 | UPS / battery backup | DIN-rail 24 VDC UPS, e.g. Phoenix Contact QUINT-UPS | $220 | Min 30 min runtime at full load |
+| 1 | Clamp-on ultrasonic flow transmitter OR paddle-wheel insertion | 4-20 mA, 0-500 GPM (or site-appropriate) | $150–$400 | Site-dependent — confirm pipe size and material before ordering |
+| 1 | P1: Compound pressure transmitter | -15 to +15 PSI, 4-20 mA, 2-wire, 1/4" NPT | $65 | Must handle vacuum |
+| 2 | P2/P3: Gauge pressure transmitters | 0-100 PSI, 4-20 mA, 2-wire, 1/4" NPT | $55 ea | Ashcroft, Dwyer, or Omega |
+| 1 | Pump proof current switch | CR Magnetics CR4110 or equiv, SPST dry contact | $28 | Clamps on motor lead |
+| 1 | Conduit and fittings | 3/4" EMT or liquid-tight flex, as required | $30 | Site-dependent length |
+| 4 | 1/4" NPT pressure taps with isolation valves | Swagelok or Parker, stainless | $40 ea | Allows transmitter removal without system drain |
 
-## Flow Sensing
-
-| # | Item | Spec / Part | Approx. Cost | Verify Before Buying |
-|---|------|-------------|-------------|----------------------|
-| 1 | Clamp-on ultrasonic flow transmitter OR paddle-wheel insertion flow transmitter | 4-20 mA output, range 0-500 GPM (or site-appropriate max) | $150-$400 | Site-dependent. Clamp-on (e.g., Siemens SITRANS FS230, or Blue-White CHEM-FEED clamp style) is easiest to retrofit — no cutting pipe. Paddle-wheel (e.g., Seametrics) requires pipe tap — lower cost but more install effort. Confirm pipe material and ID before ordering clamp-on. PVC schedule 40 and schedule 80 have different calibration curves. |
-
----
-
-## Pump Proof
-
-| # | Item | Spec / Part | Approx. Cost | Verify Before Buying |
-|---|------|-------------|-------------|----------------------|
-| 1 | Clamp-on current switch / solid-state relay output | CR Magnetics CR4110 or equivalent, adjustable trip point, SPST dry contact | $28 | Clamps around one motor lead — detects motor current without wiring into the control circuit. Confirm jaw size fits the motor cable. Adjust trip point above motor no-load current. |
+**Field add-on subtotal: ~$768 (midpoint flow)**
 
 ---
 
-## Test and Calibration Equipment
+## Field Hardening
 
-| # | Item | Spec / Part | Approx. Cost | Verify Before Buying |
-|---|------|-------------|-------------|----------------------|
-| 1 | 4-20 mA loop calibrator / simulator | Fluke 709 or equivalent, source and measure mode | $350 | Absolutely required for bench testing. Must simulate 4.0, 12.0, and 20.0 mA on each channel to verify scaling. Rent if not already owned. |
-| 1 | Digital multimeter | Any quality DMM with mA range | (likely owned) | Used to verify loop wiring polarity and confirm mA readings independently from the calibrator. |
+Items for long-term reliability in unattended field operation.
 
----
+| # | Item | Spec / Part | Approx. Cost | Notes |
+|---|------|-------------|-------------|-------|
+| 1 | Industrial pSLC SD card upgrade | Industrial Innodisk or Swissbit 32 GB pSLC | $45 | Replace standard SD; OverlayFS extends any card |
+| 1 | Hardware watchdog HAT add-on or RPi built-in WDT | dtparam=watchdog=on in config.txt (no cost) | $0–$25 | Built-in WDT free; external HAT adds belt-and-suspenders |
+| 1 | Tailscale or ZeroTier remote access | Annual license or self-hosted | $0–$48/yr | Required for remote SSH access to field device |
+| 1 | Silica gel desiccant packets | 10g per enclosure | $5 | Replace annually |
 
-## Summary: Estimated POC Unit Cost
-
-| Category | Approx. Cost |
-|----------|-------------|
-| Compute (Pi + SD + PSU) | $81 |
-| HAT | $89 |
-| Enclosure and DIN hardware | $53 |
-| Wiring and protection | $88 |
-| Pressure transmitters (×3) | $175 |
-| Flow transmitter | $200 (midpoint) |
-| Pump proof current switch | $28 |
-| Test equipment (loop calibrator) | $350 |
-| **Total (approx.)** | **$1,064** |
-
-Excluding test equipment already owned, unit cost is approximately $714 per device. Volume pricing on transmitters and Pi compute will reduce this for a production fleet.
+**Hardening subtotal: ~$75–$120**
 
 ---
 
-## Items That Are Site-Dependent
+## Optional Tools / Deferred
 
-The following choices must be confirmed per installation site before ordering:
+| # | Item | Notes |
+|---|------|-------|
+| 1 | Raspberry Pi 5 (upgrade path) | Faster, but Pi 4B is sufficient for Build 1 |
+| 1 | Cellular modem (LTE) | For sites without reliable Wi-Fi — deferred to Build 2 |
+| 1 | Suction-side flow transmitter (second flow meter) | Provides redundancy — deferred |
+| 1 | Temperature sensor (pool water) | Future feature for chemical dosing correlation |
+| 1 | Portable oscilloscope | Useful for diagnosing noisy 4-20 mA loops |
+| 1 | Pressure gauge (0-100 PSI, calibrated) | For field verification of transmitter readings |
 
-- Flow transmitter model and range (depends on pipe size, material, and expected flow range)
-- Pressure transmitter range for P2/P3 (confirm max system pressure)
-- Enclosure size (measure DIN stack height with all components fitted)
-- Cable gland sizing (measure actual cable OD before ordering)
-- PSU amperage (count all loop loads if adding extra sensors)
-- Clamp-on current switch jaw size (measure motor cable OD)
+---
+
+## Summary — Estimated Costs
+
+| Phase | Subtotal |
+|-------|---------|
+| Bench Core | ~$558 |
+| Yard Add-ons | ~$141 |
+| Field Add-ons | ~$768 |
+| Field Hardening | ~$98 |
+| **Total per unit** | **~$1,565** |
+
+Excluding owned test equipment (~$350), unit cost is approximately **$1,215 per field-deployed device**. Volume pricing on transmitters, Pi compute, and enclosures will reduce this at scale.
+
+---
+
+## Site-Dependent Decisions (Confirm Before Ordering)
+
+- Flow transmitter model and range — depends on pipe size, material, and max GPM
+- Pressure transmitter range for P2/P3 — confirm max system pressure with filter manufacturer
+- Enclosure size — measure DIN stack with all components assembled
+- Cable gland size — measure actual cable OD at the gland entry point
+- Conduit type and length — determined by site routing
+- UPS runtime — size to site's average power outage duration history
