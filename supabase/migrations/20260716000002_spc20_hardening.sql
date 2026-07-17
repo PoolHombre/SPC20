@@ -93,12 +93,13 @@ ALTER TABLE trial_runs         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE calibration_events ENABLE ROW LEVEL SECURITY;
 
 -- Allow authenticated users (dashboard) to read
-CREATE POLICY IF NOT EXISTS "allow_authenticated_read_trial_runs"
+-- Note: CREATE POLICY does not support IF NOT EXISTS in Postgres
+CREATE POLICY "allow_authenticated_read_trial_runs"
     ON trial_runs FOR SELECT
     TO authenticated
     USING (true);
 
-CREATE POLICY IF NOT EXISTS "allow_authenticated_read_calib"
+CREATE POLICY "allow_authenticated_read_calib"
     ON calibration_events FOR SELECT
     TO authenticated
     USING (true);

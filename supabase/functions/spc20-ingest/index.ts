@@ -88,6 +88,11 @@ serve(async (req) => {
     flow_gpm_stddev: body.flow_gpm_stddev,
     samples: body.samples,
     raw: { raw_ma: body.raw_ma, quality: body.quality },
+    trial_phase: body.trial_phase ?? null,
+    trial_run_id: body.trial_run_id ?? null,
+    filter_dp_psi_raw: body.filter_dp_psi_raw ?? null,
+    filter_dp_psi_corrected: body.filter_dp_psi_corrected ?? null,
+    flow_near_zero_count: body.flow_near_zero_count ?? null,
   };
 
   const { error: insertErr } = await supabase
@@ -110,7 +115,15 @@ serve(async (req) => {
     .eq("device_id", deviceId)
     .single();
 
-  const status = evaluateStatus(body, cfg);
+  // required_flow_gpm lives on the pool, not device_configs —
+  // device_configs.flow_min_gpm is the sensor range minimum (0), not a dispatch threshold
+  const { data: pool } = await supabase
+    .from("pools")
+    .select("required_flow_gpm")
+    .eq("id", device.pool_id)
+    .single();
+
+  const status = evaluateStatus(body, cfg, pool);
 
   await supabase.from("route_status_current").upsert({
     pool_id: device.pool_id,
@@ -131,7 +144,7 @@ serve(async (req) => {
 });
 
 // Simplified heuristic mirror of Python heuristics.py
-function evaluateStatus(body: Record<string, unknown>, cfg: Record<string, unknown> | null) {
+function evaluateStatus(body: Record<string, unknown>, cfg: Record<string, unknown> | null, pool: Record<string, unknown> | null) {
   const pump = body.pump_running as boolean;
   const flowAvg = (body.flow_gpm_avg as number) ?? 0;
   const flowStddev = (body.flow_gpm_stddev as number) ?? 0;
@@ -140,7 +153,7 @@ function evaluateStatus(body: Record<string, unknown>, cfg: Record<string, unkno
   const dp = (body.filter_dp_psi_avg as number) ?? 0;
   const quality = (body as Record<string, unknown>).quality as Record<string, string> ?? {};
 
-  const reqFlow = (cfg?.flow_min_gpm as number) ?? 300;
+  const reqFlow = Number(pool?.required_flow_gpm) || 300;
   const lowFlowPct = (cfg?.low_flow_red_threshold_percent as number) ?? 20;
   const svcDp = (cfg?.filter_service_dp_psi as number) ?? 12;
   const cleanDp = (cfg?.filter_clean_dp_psi as number) ?? 5;
